@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水理計算網頁版｜後台版</title>
+  <style>
+    :root{
+      --bg:#eef3f9;--panel:#ffffff;--line:#d7dfeb;--text:#1d2a3a;--muted:#617086;--accent:#cf1f2e;--accent2:#214f96;--soft:#f8fbff;--ok:#14804a;--warn:#c62828;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f3f6fb 0%,#eaf0f8 100%);font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--text)}
+    .wrap{max-width:1380px;margin:24px auto;padding:0 16px 32px}
+    .hero,.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 28px rgba(28,48,84,.05)}
+    .hero{padding:22px 24px}
+    h1{margin:0 0 8px;font-size:30px;letter-spacing:.5px}
+    .sub{color:var(--muted);line-height:1.8}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    
+    /* 分頁標籤樣式 */
+    .tab-bar { display: flex; gap: 8px; margin-top: 20px; border-bottom: 2px solid var(--accent2); padding-bottom: 0px; overflow-x: auto; }
+    .tab-item { padding: 10px 20px; background: var(--soft); border: 1px solid var(--line); border-radius: 12px 12px 0 0; cursor: pointer; font-weight: 800; color: var(--muted); border-bottom: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; transition: all 0.2s; }
+    .tab-item:hover { background: #e2eaf6; }
+    .tab-item.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    .tab-close { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 14px; opacity: 0.7; transition: 0.2s; }
+    .tab-close:hover { opacity: 1; background: rgba(255,255,255,0.2); }
+    @media print { .tab-bar { display: none !important; } }
+
+    .page-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(420px,.82fr);grid-template-areas:"left tank" "left di" "results summary";column-gap:16px;row-gap:16px;margin-top:18px;align-items:stretch}
+    .stack{display:flex;flex-direction:column;gap:16px}.left-stack{grid-area:left}.tank-card{grid-area:tank}.di-card{grid-area:di}.results-card{grid-area:results}.print-sheet{grid-area:summary}.tight-card{height:100%;display:flex;flex-direction:column}.card-equal{min-height:320px}.card-equal .results-grid,.card-equal .formula-card,.card-equal .out-line{flex:1}
+    .right-stack{height:100%}
+    .right-stack .di-card{margin-top:0}
+    .below-stack{display:contents}
+    .split-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .card{padding:18px}
+    .section-title{font-size:22px;font-weight:900;margin:0 0 14px;color:var(--accent2);letter-spacing:.5px}
+    .mini{font-size:13px;color:var(--muted)}
+    .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:start}
+    .row > div,.row > label{grid-column:span 12}
+    @media(min-width:860px){
+      .c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c9{grid-column:span 9}.c10{grid-column:span 10}.c12{grid-column:span 12}
+    }
+    label{display:block;margin-bottom:6px;font-weight:800;font-size:14px;color:#334155}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #cfd7e4;border-radius:12px;background:#fff;font-size:16px;min-height:44px}
+    input[readonly], textarea[readonly]{background:#f7f9fc;font-weight:700;color:#405068}
+    .editable-input{border:2px solid #c62828 !important;background:#fff7f7 !important;color:#b71c1c !important;font-weight:800}
+    .editable-label{color:#b71c1c !important}
+.inline-edit{display:inline-block;width:72px;min-height:32px;padding:4px 8px;border:2px solid #c62828 !important;background:#fff7f7 !important;color:#b71c1c !important;font-weight:800;border-radius:10px;vertical-align:middle;margin:0 4px}
+.inline-edit.days{width:64px}
+.export-tip{margin-top:10px;font-size:13px;color:#475569;line-height:1.7;background:#f8fbff;border:1px solid #dbe4f0;border-radius:12px;padding:10px 12px}
+    .fixed-note{margin-top:10px;background:#f8fafc;border:1px solid #dbe4f0;border-radius:12px;padding:10px 12px;color:#475569;font-size:13px;line-height:1.7}
+    table{width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed}
+    th,td{border:1px solid var(--line);padding:10px 8px;text-align:center;vertical-align:middle;word-break:break-word}
+    th{background:#f7f9fc;font-weight:800}
+    td input{min-height:40px;padding:8px 10px;border-radius:10px}
+    .num{text-align:right}
+    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    button{border:none;border-radius:12px;padding:11px 16px;font-size:15px;font-weight:800;cursor:pointer}
+    .primary{background:var(--accent2);color:#fff}
+    .ghost{background:#eef3fb;color:var(--accent2)}
+    .danger{background:#feecef;color:#a61d31}
+    .results-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .result-box{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fbfcfe}
+    .result-box h3{margin:0 0 8px;font-size:16px;color:var(--muted)}
+    .value{font-size:30px;font-weight:900;color:var(--accent);line-height:1.2}
+    .eq{font-size:14px;color:var(--muted);line-height:1.75;margin-top:6px}
+    .formula-card{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:16px}
+    .formula-title{font-size:20px;font-weight:900;color:#243b66;margin:0 0 10px}
+    .formula-line{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;line-height:2;font-size:21px;padding:6px 0;border-bottom:1px dashed #d6dfec}
+    .formula-line:last-child{border-bottom:none}
+    .formula-line-break{flex-direction:column;align-items:flex-start;line-height:1.6;gap:2px}
+    .formula-line-break > div{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+    .formula-line .label{font-weight:800;color:#26323f}
+    .formula-line .n{display:inline-block;min-width:88px;text-align:center;font-weight:900;color:var(--accent)}
+    .formula-line .u{font-size:18px}
+    .formula-note{margin-top:10px;font-size:15px;color:#334155;line-height:1.8}
+    .note{background:#fff8e8;border:1px solid #f2d28c;border-radius:14px;padding:12px 14px;color:#6b4b00;line-height:1.8}
+    .print-sheet{margin-top:0}
+    .out-line{line-height:2;font-size:15px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef3fb;color:var(--accent2);font-weight:700;font-size:12px;margin-left:8px}
+    .adopt-red{color:#d40000;font-weight:900}
+    .active-row td{background:#fff5f5}
+    .active-row td:first-child{font-weight:800}
+    .tiny{font-size:12px;color:var(--muted)}
+    .summary-list{display:grid;gap:8px}
+    .summary-list b{font-weight:900}
+    .backend-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:999}
+    .backend-panel{width:min(1080px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;border:1px solid var(--line);box-shadow:0 20px 50px rgba(15,23,42,.25)}
+    .backend-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .backend-section{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fbfcfe}
+    .backend-title{font-size:18px;font-weight:900;color:#214f96;margin:0 0 10px}
+    .pwbox{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}
+    .close-x{float:right;background:#feecef;color:#a61d31}
+    .muted{color:var(--muted)}
+    
+    .backend-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .backend-section textarea{min-height:88px;resize:vertical}
+    .layout-table td,.layout-table th{text-align:left}
+    .layout-table input,.layout-table select{min-height:38px;padding:8px 10px;font-size:14px}
+    .card-layouting{outline:2px dashed rgba(33,79,150,.35);outline-offset:2px}
+    .card-grab{cursor:move}
+    .slot-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef3fb;color:#214f96;font-size:12px;font-weight:800;margin-left:6px}
+    @media(max-width:1180px){.backend-grid-3{grid-template-columns:1fr}}
+    @media(max-width:1180px){.page-grid{grid-template-columns:1fr;grid-template-areas:"left" "tank" "di" "results" "summary"}.split-2{grid-template-columns:1fr}.results-grid{grid-template-columns:1fr}.formula-line{font-size:18px}.formula-line .u{font-size:16px}.backend-grid{grid-template-columns:1fr}}
+    @page{size:A4 portrait;margin:10mm}
+    @media print{html,body{background:#fff !important}body{font-size:11pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}.wrap{max-width:190mm;margin:0 auto;padding:0}.hero,.card{box-shadow:none;break-inside:avoid;border-radius:8px}.hero{padding:10px 12px;margin-bottom:4mm}.card{padding:10px}.page-grid{display:grid;grid-template-columns:118mm 62mm;grid-template-areas:"left tank" "left di" "results summary";column-gap:4mm;row-gap:4mm;margin-top:0;align-items:start}.left-stack{grid-area:left;display:block}.left-stack > .card:first-child{break-after:avoid-page;page-break-after:avoid}.left-stack > .card:nth-child(2){break-before:page;page-break-before:always;break-inside:avoid-page;page-break-inside:avoid}.tank-card{grid-area:tank;height:62mm}.di-card{grid-area:di;height:55mm}.results-card{grid-area:results;height:72mm}.print-sheet{grid-area:summary;height:72mm}.tight-card,.card-equal{min-height:0;height:100%}.section-title{font-size:14pt;margin:0 0 8px}.value{font-size:18pt}.eq,.out-line,.formula-note,.mini,.fixed-note,.tiny,th,td,label,input{font-size:9pt}.btns,.top-actions{display:none !important}.backend-overlay{display:none !important}input,select,textarea{min-height:0;padding:6px 8px;border-radius:6px}th,td{padding:4px 3px}.formula-card{padding:8px;height:calc(100% - 54px);display:flex;flex-direction:column}.formula-title{font-size:12pt;margin:0 0 6px}.formula-line{font-size:10pt;line-height:1.45;padding:3px 0}.formula-line .u{font-size:9pt}.results-grid{height:calc(100% - 54px);gap:8px}.result-box{padding:8px;border-radius:10px}.result-box h3{font-size:9pt;margin:0 0 4px}.out-line{height:calc(100% - 28px);overflow:hidden;line-height:1.6}.summary-list{gap:4px}.note{margin-top:8px;padding:8px 10px;line-height:1.5}.row{gap:8px}.fixed-note{padding:8px 10px}.mini{line-height:1.5}.below-stack{display:contents}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="hero">
+      <h1 id="pageTitle">台灣自來水公司內線審查計算表｜網頁版填入計算</h1>
+      <div class="sub" id="heroSub">可直接輸入工程名稱、建照號碼、戶數、樓地板面積、V2 調整係數、住宅類基準日數、水池與水塔容量，系統自動計算 <b>V1、V2、V、Vd、Di、水池/水塔容量、揚水管口徑</b>。<br>固定欄位預設不可改；如需調整固定數值，請進入後台設定。</div>
+      
+      <!-- 日期與最後更新區塊 -->
+      <div style="margin-top:12px; margin-bottom:6px; font-size:14px; color:var(--muted); font-weight:800; display:flex; gap:20px; flex-wrap:wrap;">
+        <div>今日日期及時間：<span id="currentDateTime"></span></div>
+        <div>最後更新日期：<span id="lastUpdatedTime">尚未更新</span></div>
+      </div>
+
+      <!-- 按鈕操作區塊 -->
+      <div class="top-actions" style="justify-content: space-between; align-items: center; margin-top: 8px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <button id="tempSaveBtn" class="ghost" onclick="tempSaveData()" style="display:none;">儲存數據(暫存)</button>
+          <button class="primary" onclick="window.print()">列印 / 存成 PDF</button>
+          <button class="ghost" onclick="return saveAsNewHTML(event)">另存新檔 HTML</button>
+          <button id="addProjBtn" class="ghost" onclick="addNewProject()" style="display:none;">新增建案</button>
+          <button id="backendBtn" class="ghost" onclick="openBackend()" style="display:none;">後台設定</button>
+          <button class="ghost" onclick="openBaselineModal()" style="color: #0f766e; background: #f0fdfa; border: 1px solid #ccfbf1; font-weight: 900;">全台各區每日用水量基準值</button>
+        </div>
+        <button id="modeBtn" class="primary" style="margin-left: auto;" onclick="requestEditMode()">進入編輯模式</button>
+      </div>
+    </div>
+
+    <!-- 分頁選單 -->
+    <div id="tabBar" class="tab-bar"></div>
+
+    <div class="page-grid" style="gap: 16px;">
+      <div class="stack left-stack">
+        
+      <div class="card" id="basicCard" data-card="basic" style="padding: 18px; margin-top: 0px;">
+          <div class="section-title" id="basicTitle">基本資料</div>
+          <div class="row">
+            <div class="c6">
+              <label class="editable-label">工程名稱</label>
+              <input id="projectName" class="editable-input" value="HASS林口建林段">
+            </div>
+            <div class="c6">
+              <label class="editable-label">建照號碼</label>
+              <input id="permitNo" class="editable-input" value="" placeholder="可留白">
+            </div>
+          </div>
+        </div><div class="card" id="waterCard" data-card="water" style="padding: 18px; margin-top: 0px;">
+          <div class="section-title" id="waterTitle">一、間接給水總表口徑 — 日用水量 V</div>
+          <div class="mini">1. 由用水人口數推算（供住宅使用部分）</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:24%">類型</th>
+                <th style="width:16%">人數/戶</th>
+                <th style="width:18%; color:#b71c1c">戶數</th>
+                <th style="width:20%">用水量 (L/cap.)</th>
+                <th style="width:22%">V1 分項 (M³)</th>
+              </tr>
+            </thead>
+            <tbody id="resBody"></tbody>
+          </table>
+          <div class="mini" id="residentialRuleText" style="margin-top:10px; color:#0f766e; font-weight:700; line-height:1.8;"></div>
+          <div class="fixed-note" id="waterFixedNote"></div>
+
+          <div style="height:14px"></div>
+          <div class="mini">2. 間接給水（大樓、公寓等）樓地板面積推算法</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:20%">建築物種類</th>
+                <th style="width:18%; color:#b71c1c">樓地板面積 (M²)</th>
+                <th style="width:14%">有效面積比</th>
+                <th style="width:14%">人員 (人/M²)</th>
+                <th style="width:14%">使用水量 (L/人)</th>
+                <th style="width:20%">V2' (M³)</th>
+              </tr>
+            </thead>
+            <tbody id="nrBody"></tbody>
+          </table>
+
+          <div class="row" style="margin-top:16px">
+            <div class="c4">
+              <label class="editable-label">V2 調整係數</label>
+              <input id="v2Factor" class="editable-input num" type="number" step="0.01" value="1">
+              <div class="tiny">例如 +10% 可填 1.1</div>
+            </div>
+            <div class="c4">
+              <label class="editable-label">住宅類基準日數</label>
+              <input id="resDays" class="editable-input num" type="number" step="1" value="2">
+            </div>
+          </div>
+        </div></div>
+
+      <div class="card tank-card tight-card card-equal" id="tankCard" data-card="tank" style="padding: 18px; min-height: 320px; margin-top: 0px; grid-row-start: tank; grid-column-start: tank; grid-row-end: tank; grid-column-end: tank;">
+        <div class="section-title" id="tankTitle">二、水池（Vg）及水塔（Vt）容量</div>
+        <div class="row">
+          <div class="c6">
+            <label class="editable-label">採用水池容量 Vg (M³)</label>
+            <input id="adoptVg" class="editable-input num" type="number" step="0.01" value="0">
+          </div>
+          <div class="c6">
+            <label class="editable-label">採用水塔容量 Vt (M³)</label>
+            <input id="adoptVt" class="editable-input num" type="number" step="0.01" value="0">
+          </div>
+        </div>
+
+        <div class="formula-card" style="margin-top:12px">
+          <div class="formula-title">容量檢核公式</div>
+          <div class="formula-line">
+            <span class="label">（一）水池（Vg）採用（</span><span class="n" id="fAdoptVg">0</span><span class="label">）</span><span class="u">M³ ≧ 一日設計用水量（Vd）×</span><input id="vgPercent" class="inline-edit num" type="number" step="0.01" value="20"><span class="u">% = </span><span class="n" id="fMinVg">0</span><span class="u"> M³</span>
+          </div>
+          <div class="formula-line">
+            <span class="label">（二）水塔（Vt）採用（</span><span class="n" id="fAdoptVt">0</span><span class="label">）</span><span class="u">M³</span>
+          </div>
+          <div class="formula-line">
+            <span class="label">（三）水池、水塔容量合計（</span><span class="n" id="fTankTotal">0</span><span class="label">）</span><span class="u">M³，應大於</span><input id="formulaDays" class="inline-edit days num" type="number" step="1" value="2"><span class="u">日設計用水量（Vd）= </span><span class="n" id="fVd100">0</span><span class="u"> M³</span>
+          </div>
+          <div class="formula-line formula-line-break" id="resBaseLine">
+            <div>
+              <span class="label">住宅類需符合本公司公告之基準值</span>
+            </div>
+            <div>
+              <span class="n" id="fResDays">1</span><span class="u"> 日設計用水量 = </span><span class="n" id="fResBase">0</span><span class="u"> M³</span>
+            </div>
+          </div>
+          <div class="formula-note" id="tankJudgeText"></div>
+        </div>
+      </div>
+
+      <div class="card di-card tight-card" id="diCard" data-card="di" style="padding: 18px; margin-top: 0px; grid-row-start: di; grid-column-start: di; grid-row-end: di; grid-column-end: di;">
+          <div class="section-title" id="diTitle">（二）進水管口徑（Di）／一日設計用水量（Vd）</div>
+          <table>
+            <thead>
+              <tr>
+                <th>V值範圍 (M³)</th>
+                <th>安全係數</th>
+                <th>總表口徑 (mm)</th>
+                <th>Vd</th>
+                <th>本案採用</th>
+              </tr>
+            </thead>
+            <tbody id="diTableBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" style="text-align:left; font-weight:700; background:#fff;">
+                  一日設計用水量 (Vd) = V × 安全係數 =（ <span id="footVdValue">0</span> ）M³
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      <div class="card results-card tight-card card-equal" id="resultsCard" data-card="results" style="padding: 18px; min-height: 320px; margin-top: 0px; grid-row-start: results; grid-column-start: results; grid-row-end: results; grid-column-end: results;">
+          <div class="section-title" id="resultsTitle">計算結果總覽</div>
+          <div class="results-grid">
+            <div class="result-box"><h3>V1 住宅用水量</h3><div class="value" id="outV1">0</div><div class="eq" id="eqV1"></div></div>
+            <div class="result-box"><h3>V2 非住宅用水量</h3><div class="value" id="outV2">0</div><div class="eq" id="eqV2"></div></div>
+            <div class="result-box"><h3>V 一日用水量</h3><div class="value" id="outV">0</div><div class="eq" id="eqV"></div></div>
+            <div class="result-box"><h3>Vd 一日設計用水量</h3><div class="value" id="outVd">0</div><div class="eq" id="eqVd"></div></div>
+            <div class="result-box"><h3>建議總表口徑</h3><div class="value" id="outMeter">0</div><div class="eq" id="eqMeter"></div></div>
+            <div class="result-box"><h3>揚水管口徑 Dp</h3><div class="value" id="outDp">0</div><div class="eq" id="eqDp"></div></div>
+          </div>
+          <div class="note" id="resultsNote" style="margin-top:14px"></div>
+        </div>
+
+      <div class="card print-sheet tight-card card-equal" id="summaryCard" data-card="summary" style="padding: 18px; min-height: 320px; margin-top: 0px; grid-row-start: summary; grid-column-start: summary; grid-row-end: summary; grid-column-end: summary;">
+        <div class="section-title" id="summaryTitle">列印摘要</div>
+        <div class="out-line" id="summary"></div>
+      </div>
+      </div>
+    </div>
+
+  <!-- 用水量基準值查詢面板 -->
+  <div class="backend-overlay" id="baselineOverlay" style="display: none;">
+    <div class="backend-panel" style="width: min(1000px, 95%);">
+      <button class="close-x" onclick="closeBaselineModal()">關閉</button>
+      <div class="section-title" style="margin-top:0; font-size:24px;">全台各區每日用水量基準值</div>
+      <div class="mini" style="margin-bottom: 16px; font-size:14px;">依據台灣自來水股份有限公司公告（111年10月26日台水營字第1110037083號修訂版）</div>
+
+      <div class="fixed-note" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534; font-size: 16px; margin-bottom: 20px;">
+        <b>一、一般供水區：</b>蓄水池及水塔合計容量基準值為 <b style="color:#b91c1c; font-size:18px;">1.0 日</b> 設計用水量。
+      </div>
+
+      <div style="margin-top: 16px;">
+        <b style="font-size: 16px;">二、供水條件特殊或停復水較困難等地區採個別訂定基準值：</b>
+        <div style="margin-top: 10px; margin-bottom: 12px;">
+          <input type="text" id="baselineSearch" placeholder="🔍 輸入縣市、鄉鎮或村里關鍵字快速搜尋 (例如: 基隆、花壇)..." style="max-width: 480px; border: 2px solid var(--accent2);">
+        </div>
+      </div>
+
+      <div style="max-height: 50vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px;">
+        <table style="margin-top: 0; border: none; width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; z-index: 10; background: #f7f9fc;">
+            <tr>
+              <th style="width:14%; padding: 12px 8px;">直轄市、<br>縣、市</th>
+              <th style="width:14%; padding: 12px 8px;">鄉、鎮、<br>市、區</th>
+              <th style="width:42%; text-align:left; padding: 12px 8px;">村里或路段</th>
+              <th style="width:12%; padding: 12px 8px;">蓄水量<br>(日)</th>
+              <th style="width:18%; padding: 12px 8px;">備註</th>
+            </tr>
+          </thead>
+          <tbody id="baselineTbody">
+            <!-- 由 JavaScript 動態填入 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 切換編輯模式彈窗 -->
+  <div class="backend-overlay" id="editModeOverlay" style="display: none;">
+    <div class="backend-panel" style="width: min(400px, 100%);">
+      <button class="close-x" onclick="closeEditModeModal()">關閉</button>
+      <div class="section-title" style="margin-top:0; font-size:20px;">切換為編輯模式</div>
+      <div style="margin-top: 16px;">
+        <label>請輸入編輯密碼</label>
+        <input id="editModePassword" type="password" placeholder="預設密碼 123456" style="margin-bottom: 8px;" onkeydown="if(event.key==='Enter') verifyEditModePw()">
+        <div id="editPwError" style="color:var(--warn); font-size:13px; font-weight:bold; display:none; margin-bottom:12px;">密碼錯誤，請重新輸入。</div>
+        <div class="btns">
+          <button class="primary" onclick="verifyEditModePw()">確認</button>
+          <button class="ghost" onclick="closeEditModeModal()">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="backend-overlay" id="backendOverlay" style="display: none;">
+    <div class="backend-panel">
+      <button class="close-x" onclick="closeBackend()">關閉</button>
+      <div class="section-title" style="margin-top:0">後台設定</div>
+      <div class="pwbox">
+        <div>
+          <label>後台密碼</label>
+          <input id="adminPassword" type="password" placeholder="請輸入密碼">
+        </div>
+        <button class="primary" onclick="unlockBackend()">進入後台</button>
+        <button class="ghost" onclick="closeBackend()">取消</button>
+      </div>
+      <div class="fixed-note">預設密碼：<b>123456</b>。進入後可修改固定數值。<b>為保護資料獨立性，儲存後之「數據設定」將更新【當前建案】並作為未來新增的範本，絕不會影響其他分頁已建立的數據。</b></div>
+      <div id="backendContent" style="display: block; margin-top: 16px;">
+        <div class="backend-grid">
+          <div class="backend-section">
+            <div class="backend-title">住宅固定值</div>
+            <table>
+              <thead><tr><th>類型</th><th>人數/戶</th><th>每人用水量</th></tr></thead>
+              <tbody id="adminResBody"></tbody>
+            </table>
+          </div>
+          <div class="backend-section">
+            <div class="backend-title">非住宅固定值</div>
+            <table>
+              <thead><tr><th>建築物種類</th><th>有效面積比</th><th>人員</th><th>使用水量</th></tr></thead>
+              <tbody id="adminNrBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="backend-grid" style="margin-top:16px">
+          <div class="backend-section">
+            <div class="backend-title">標準口徑設定</div>
+            <div class="row">
+              <div class="c4"><label>低區口徑</label><input id="std20" type="number" value="20"></div>
+              <div class="c4"><label>中區口徑</label><input id="std25" type="number" value="25"></div>
+              <div class="c4"><label>高區口徑</label><input id="std40" type="number" value="40"></div>
+            </div>
+            <div class="fixed-note muted">Di / Dp 超出範圍時仍依公式計算值顯示；這裡僅設定優先採用的標準口徑。</div>
+          </div>
+          <div class="backend-section">
+            <div class="backend-title">其他後台說明</div>
+            <div class="fixed-note">
+              1. 前台紅色欄位可直接填寫。<br>
+              2. 黑框內固定數值請在此修改。<br>
+              3. 儲存後「排版與文字」會立即更新全域；<b>「數據設定」會立即套用在【當前分頁】，並成為未來建案的預設，不會干擾其他分頁。</b><br>
+              4. 若要回到原始預設，可按「恢復預設值」。
+            </div>
+          </div>
+        </div>
+        <div class="backend-grid" style="margin-top:16px">
+          <div class="backend-section">
+            <div class="backend-title">文字內容設定</div>
+            <div class="row">
+              <div class="c12"><label>頁首標題</label><input id="txtPageTitle"></div>
+              <div class="c12"><label>頁首說明</label><textarea id="txtHeroSub"></textarea></div>
+              <div class="c6"><label>基本資料標題</label><input id="txtBasicTitle"></div>
+              <div class="c6"><label>日用水量標題</label><input id="txtWaterTitle"></div>
+              <div class="c6"><label>水池水塔標題</label><input id="txtTankTitle"></div>
+              <div class="c6"><label>Di/Vd 標題</label><input id="txtDiTitle"></div>
+              <div class="c6"><label>計算結果總覽標題</label><input id="txtResultsTitle"></div>
+              <div class="c6"><label>列印摘要標題</label><input id="txtSummaryTitle"></div>
+              <div class="c12"><label>住宅說明文字</label><textarea id="txtResidentialRule"></textarea></div>
+              <div class="c12"><label>固定欄位說明</label><textarea id="txtWaterFixedNote"></textarea></div>
+              <div class="c12"><label>結果總覽補充說明</label><textarea id="txtResultsNote"></textarea></div>
+            </div>
+          </div>
+          <div class="backend-section">
+            <div class="backend-title">版面位置 / 大小設定</div>
+            <div class="fixed-note">可調整右側與下方四個主框的位置、上下間距、卡片高度、內距。左側兩個主框可調整順序與高度。儲存後立即套用。</div>
+            <div class="row">
+              <div class="c4"><label>左右欄間距</label><input id="layoutGap" type="number" step="1"></div>
+              <div class="c4"><label>上下列間距</label><input id="layoutRowGap" type="number" step="1"></div>
+              <div class="c4"><label>卡片預設內距</label><input id="layoutCardPadding" type="number" step="1"></div>
+            </div>
+            <table class="layout-table">
+              <thead><tr><th>區塊</th><th>位置</th><th>最小高度</th><th>上方位移</th></tr></thead>
+              <tbody>
+                <tr><td>基本資料</td><td><select id="slotBasic"><option value="1">左上</option><option value="2">左下</option></select></td><td><input id="hBasic" type="number"></td><td><input id="mtBasic" type="number"></td></tr>
+                <tr><td>日用水量 V</td><td><select id="slotWater"><option value="1">左上</option><option value="2">左下</option></select></td><td><input id="hWater" type="number"></td><td><input id="mtWater" type="number"></td></tr>
+                <tr><td>水池/水塔容量</td><td><select id="slotTank"><option value="tank">右上</option><option value="di">右中</option><option value="results">左下</option><option value="summary">右下</option></select></td><td><input id="hTank" type="number"></td><td><input id="mtTank" type="number"></td></tr>
+                <tr><td>Di / Vd</td><td><select id="slotDi"><option value="tank">右上</option><option value="di">右中</option><option value="results">左下</option><option value="summary">右下</option></select></td><td><input id="hDi" type="number"></td><td><input id="mtDi" type="number"></td></tr>
+                <tr><td>計算結果總覽</td><td><select id="slotResults"><option value="tank">右上</option><option value="di">右中</option><option value="results">左下</option><option value="summary">右下</option></select></td><td><input id="hResults" type="number"></td><td><input id="mtResults" type="number"></td></tr>
+                <tr><td>列印摘要</td><td><select id="slotSummary"><option value="tank">右上</option><option value="di">右中</option><option value="results">左下</option><option value="summary">右下</option></select></td><td><input id="hSummary" type="number"></td><td><input id="mtSummary" type="number"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button class="primary" onclick="saveBackend()">儲存後台設定</button>
+          <button class="danger" onclick="resetBackendDefaults()">恢復預設值</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// 【核心安全更新與資料獨立】
+// 每一個建案將保存一份專屬於自己的「參數快照」。後台更改參數會更新當下觀看的建案，並儲存為未來新增建案的預設，不干擾其他已建檔分頁。
+
+const STORAGE_MAIN = 'water_calc_main_v5';
+const STORAGE_BACKEND = 'water_calc_backend_v5';
+const DEFAULT_PASSWORD = '123456';
+
+// 基準值資料庫整理 (完美對應台水公告圖片與 PDF 跨列排版格式與完整區域)
+const baselineData = [
+  {
+    city: '基隆市', rows: [
+      { district: '中正區', villages: '和平島(全區)、調和街、新豐街、武昌街104巷', days: '2.0', note: '高地供水' },
+      { district: '七堵區', villages: '大同街、東新街、泰安路、大華三路', days: '2.0', note: '高地供水' },
+      { district: '信義區', villages: '深澳坑路', days: '2.0', note: '高地供水' },
+      { district: '仁愛區', villages: '南新街、龍安街', days: '2.0', note: '高地供水' },
+      { district: '中山區', villages: '中和路', days: '2.0', note: '高地供水' }
+    ]
+  },
+  {
+    city: '新北市', rows: [
+      { district: '淡水區', villages: '新義里、新民里、樹興里、正德里、新春里、坪頂里、北新里、崁頂里、新興里', days: '2.0', note: '高地供水' },
+      { district: '汐止區', villages: '水源路2段、秀山路、勤進路、新台五路2段170號以後、汐萬路3段、伯爵街、湖前路100號以後', days: '2.0', note: '高地供水' },
+      { district: '貢寮區', villages: '和美里', days: '2.0', note: '高地供水' },
+      { district: '烏來區', villages: '全區', days: '2.0', note: '高地供水' },
+      { district: '平溪區', villages: '嶺腳里', days: '2.0', note: '高地供水' },
+      { district: '深坑區', villages: '土庫里', days: '2.0', note: '高地供水' },
+      { district: '瑞芳區', villages: '九份地區（包含福住里、崇文里、基山里、頌德里、永慶里）、金瓜石地區（包含石山里、銅山里、瓜山里、新山里）、濂新里、濂洞里、南雅里、海濱里、瑞濱里', days: '2.0', note: '高地供水' },
+      { district: '三芝區', villages: '圓山里、店子里、興華里', days: '2.0', note: '高地供水' },
+      { district: '石門區', villages: '乾華里、茂林里', days: '2.0', note: '高地供水' },
+      { district: '雙溪區', villages: '泰平里', days: '2.0', note: '高地供水' },
+      { district: '新店區', villages: '廣興里、塗潭里、直潭里、粗坑里、青潭里、美城里、員潭里、雙坑里、日興里、德安里', days: '2.0', note: '高地供水' },
+      { district: '三峽區', villages: '建安里、安坑里、竹崙里、插角里、有木里、五寮里、二鬮里', days: '2.0', note: '高地供水' },
+      { district: '鶯歌區', villages: '兔坑里、鳳鳴里、鳳福里、鳳祥里、大湖里、中湖里', days: '2.0', note: '高地供水' },
+      { district: '林口區', villages: '頂福里、下福里、南勢里、麗林里、<br>麗園里、東勢里、西林里、林口里、東林里', days: '2.0', note: '高地供水' }
+    ]
+  },
+  {
+    city: '桃園市', rows: [
+      { district: '復興區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '龜山區', villages: '大坑里、兔子坑里、龍壽里', days: '2.0', note: '高地供水' },
+      { district: '桃園區', villages: '福林里', days: '2.0', note: '管線末端' }
+    ]
+  },
+  {
+    city: '新竹縣', rows: [
+      { district: '尖石鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '五峰鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '峨眉鄉', villages: '七星村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '關西鎮', villages: '錦山里', days: '2.0', note: '高地及偏遠地區' },
+      { district: '橫山鄉', villages: '豐鄉村', days: '2.0', note: '高地及偏遠地區' }
+    ]
+  },
+  {
+    city: '苗栗縣', rows: [
+      { district: '泰安鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '獅潭鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '南庄鄉', villages: '蓬萊村、東河村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '大湖鄉', villages: '栗林村、武榮村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '卓蘭鎮', villages: '坪林里', days: '2.0', note: '高地及偏遠地區' }
+    ]
+  },
+  {
+    city: '臺中市', rows: [
+      { district: '沙鹿區', villages: '鎮南路以東、自由路以東部分', days: '1.5', note: '高地供水' },
+      { district: '北屯區', villages: '民政里、大坑里、東山里、部子里', days: '1.5', note: '高地供水' },
+      { district: '南屯區', villages: '春社里、春安里、文山里、寶山里', days: '1.5', note: '高地供水' },
+      { district: '西屯區', villages: '廣褔路', days: '1.5', note: '管線末端' },
+      { district: '大雅區', villages: '大雅區(中山高國道1號以西)', days: '1.5', note: '管線末端' },
+      { district: '神岡區', villages: '新庄里、神岡里、圳前里、庄前里、庄後里、北庄里、山皮里、社口里', days: '1.5', note: '管線末端' },
+      { district: '清水區', villages: '楊厝里、吳厝里、海風里、東山里', days: '1.5', note: '管線末端' },
+      { district: '梧棲區', villages: '全區', days: '1.5', note: '管線末端' },
+      { district: '大甲區', villages: '建興里、西岐里、銅安里、福德里、江南里、頂店里', days: '1.5', note: '管線末端' },
+      { district: '大安區', villages: '全區', days: '1.5', note: '管線末端' },
+      { district: '外埔區', villages: '水美里、三崁里', days: '1.5', note: '管線末端' },
+      { district: '霧峰區', villages: '桐林里、峰谷里', days: '1.5', note: '管線末端' },
+      { district: '太平區', villages: '黃竹里、頭汴里、東汴里', days: '1.5', note: '管線末端' },
+      { district: '大肚區', villages: '大肚龍井山頂區、沙田路3段以南至沙田路1段王田里一帶、<br>自由路、華山路(自由路以東部分)', days: '1.5', note: '高地供水' },
+      { district: '龍井區', villages: '新庄里、南寮里、東海里', days: '1.5', note: '水量不足' }
+    ]
+  },
+  {
+    city: '南投縣', rows: [
+      { district: '信義鄉', villages: '新開巷', days: '1.5', note: '管線末端' },
+      { district: '魚池鄉', villages: '日月村、水社村', days: '1.5', note: '高地供水' },
+      { district: '埔里鎮', villages: '南村里、水頭里、蜈蚣里、大湳里、牛眠里、史港里、珠格里、溪南里', days: '1.5', note: '高地供水' },
+      { district: '仁愛鄉', villages: '大同村、春陽村', days: '1.5', note: '高地供水' },
+      { district: '國姓鄉', villages: '南港村、北山村、福龜村', days: '1.5', note: '高地供水' }
+    ]
+  },
+  {
+    city: '彰化縣', rows: [
+      { district: '彰化市', villages: '全區', days: '2.0', note: '水量不足' },
+      { district: '和美鎮', villages: '全區', days: '2.0', note: '水量不足' },
+      { district: '永靖鄉', villages: '浮圳村、港南村、獨鰲村、敦厚村、崙子村、竹子村', days: '1.5', note: '水量不足' },
+      { district: '芬園鄉', villages: '全區', days: '2.0', note: '高地供水' },
+      { district: '社頭鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '秀水鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '芳苑鄉', villages: '全區(含下崙村等)', days: '1.5', note: '水量不足' },
+      { district: '大城鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '線西鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '埔心鄉', villages: '埤霞村、埤腳村、油車村', days: '1.5', note: '水量不足' },
+      { district: '花壇鄉', villages: '花壇村、金墩村、中庄村、劉厝村、崙雅村、南口村、長沙村、北口村、中口村、橋頭村、白沙村、文德村、長春村、灣東村、三春村', days: '1.5', note: '水量不足' },
+      { district: '花壇鄉', villages: '岩竹村、三芬路(永春村、灣雅村)', days: '2.0', note: '高地供水與管線末端' },
+      { district: '大村鄉', villages: '大村村、茄苳村、南勢村、田洋村、新興村、過溝村、平和村、貢旗村、加錫村、村上村、大橋村、大崙村', days: '1.5', note: '水量不足' },
+      { district: '大村鄉', villages: '福興二巷(福興村)、擺塘村、美港村、黃厝村', days: '2.0', note: '高地供水與管線末端' },
+      { district: '員林市', villages: '全區', days: '2.0', note: '水量不足' }
+    ]
+  },
+  {
+    city: '雲林縣', rows: [
+      { district: '虎尾鎮', villages: '中部科學園區虎尾園區', days: '2.0', note: '特定計畫區' },
+      { district: '口湖鄉', villages: '下崙村等沿海地區', days: '1.5', note: '水量不足' },
+      { district: '麥寮鄉', villages: '全區', days: '2.0', note: '管線末端 / 水量不足' },
+      { district: '古坑鄉', villages: '草嶺村、樟湖村、桂林村、華山村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '林內鄉', villages: '坪頂村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '斗六市', villages: '湖山里', days: '2.0', note: '高地及偏遠地區' }
+    ]
+  },
+  {
+    city: '嘉義縣', rows: [
+      { district: '阿里山鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '梅山鄉', villages: '太平村、太興村、瑞里村、瑞峰村、太和村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '大埔鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '番路鄉', villages: '公田村、公興村、草山村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '竹崎鄉', villages: '中和村、光華村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '東石鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '鹿草鄉', villages: '全區', days: '1.5', note: '水量不足' },
+      { district: '布袋鎮', villages: '全區', days: '1.5', note: '水量不足' }
+    ]
+  },
+  {
+    city: '臺南市', rows: [
+      { district: '南化區', villages: '關山里', days: '2.0', note: '高地及偏遠地區' },
+      { district: '楠西區', villages: '密枝里、龜丹里', days: '2.0', note: '高地及偏遠地區' },
+      { district: '龍崎區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '白河區', villages: '六溪里、崎內里、汴頭里', days: '2.0', note: '高地供水' },
+      { district: '東山區', villages: '南溪里、水雲里、林安里、東原里、<br>嶺南里、南勢里、青山里、高原里', days: '2.0', note: '高地供水' }
+    ]
+  },
+  {
+    city: '高雄市', rows: [
+      { district: '六龜區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '甲仙區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '桃源區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '那瑪夏區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '茂林區', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '田寮區', villages: '田寮里、南安里、七星里', days: '2.0', note: '高地供水' },
+      { district: '燕巢區', villages: '牧場路', days: '2.0', note: '高地供水' },
+      { district: '梓官區', villages: '赤崁北路', days: '2.0', note: '管線末端' },
+      { district: '彌陀區', villages: '舊港里、新庄里、漯底里', days: '2.0', note: '管線末端' }
+    ]
+  },
+  {
+    city: '屏東縣', rows: [
+      { district: '恆春鎮', villages: '水泉里、大光里、山海里', days: '2.0', note: '管線末端' },
+      { district: '滿州鄉', villages: '全區', days: '2.0', note: '管線末端' },
+      { district: '牡丹鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '獅子鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '琉球鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '春日鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '泰武鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '來義鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '瑪家鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '三地門鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '霧台鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '新園鄉', villages: '全區', days: '2.0', note: '管線末端' },
+      { district: '崁頂鄉', villages: '全區', days: '2.0', note: '管線末端' },
+      { district: '南州鄉', villages: '全區', days: '2.0', note: '管線末端' }
+    ]
+  },
+  {
+    city: '宜蘭縣', rows: [
+      { district: '頭城鎮', villages: '大溪、大里、石城', days: '2.0', note: '管線末端' },
+      { district: '大同鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' },
+      { district: '南澳鄉', villages: '全區', days: '2.0', note: '高地及偏遠地區' }
+    ]
+  },
+  {
+    city: '花蓮縣', rows: [
+      { district: '秀林鄉', villages: '富世村、崇德村、和平村', days: '2.0', note: '高地及偏遠地區' },
+      { district: '豐濱鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '萬榮鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '卓溪鄉', villages: '全區', days: '2.0', note: '偏遠地區' }
+    ]
+  },
+  {
+    city: '臺東縣', rows: [
+      { district: '綠島鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '蘭嶼鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '達仁鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '大武鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '金峰鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '太麻里鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '延平鄉', villages: '全區', days: '2.0', note: '偏遠地區' },
+      { district: '海端鄉', villages: '全區', days: '2.0', note: '偏遠地區' }
+    ]
+  },
+  {
+    city: '澎湖縣', rows: [
+      { district: '馬公市', villages: '虎井里、桶盤里', days: '2.0', note: '離島地區' },
+      { district: '望安鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '七美鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '白沙鄉', villages: '吉貝村、鳥嶼村、員貝村、大倉村', days: '2.0', note: '離島地區' },
+      { district: '湖西鄉', villages: '全區', days: '2.0', note: '離島地區' },
+      { district: '西嶼鄉', villages: '全區', days: '2.0', note: '離島地區' }
+    ]
+  }
+];
+
+function deepClone(obj) {
+  if (!obj) return obj;
+  return JSON.parse(JSON.stringify(obj));
+}
+
+const defaultResidential = [
+  { name:'套房', people:2, households:0, liters:250 },
+  { name:'住宅', people:3, households:46, liters:250 },
+  { name:'透天/大型別墅', people:8, households:0, liters:250 }
+];
+
+const defaultNonResidential = [
+  { name:'辦公室', area:0, ratio:0.6, persons:0.2, liters:100 },
+  { name:'一般事務所', area:0, ratio:0.57, persons:0.2, liters:100 },
+  { name:'店舖(三戶)', area:182.72, ratio:0.55, persons:0.16, liters:100 },
+  { name:'中小學校', area:0, ratio:0.6, persons:0.2, liters:40 },
+  { name:'工廠', area:0, ratio:0.6, persons:0.2, liters:60 }
+];
+
+const defaultBackend = {
+  residential: deepClone(defaultResidential).map(function(item) { return {name: item.name, people: item.people, liters: item.liters}; }),
+  nonResidential: deepClone(defaultNonResidential).map(function(item) { return {name: item.name, ratio: item.ratio, persons: item.persons, liters: item.liters}; }),
+  standardSizes:[20,25,40,50,75,100],
+  texts:{
+    pageTitle:'台灣自來水公司內線審查計算表｜網頁版填入計算',
+    heroSub:'可直接輸入工程名稱、建照號碼、戶數、樓地板面積、V2 調整係數、住宅類基準日數、水池與水塔容量，系統自動計算 <b>V1、V2、V、Vd、Di、水池/水塔容量、揚水管口徑</b>。<br>固定欄位預設不可改；如需調整固定數值，請進入後台設定。',
+    basicTitle:'基本資料',
+    waterTitle:'一、間接給水總表口徑 — 日用水量 V',
+    tankTitle:'二、水池（Vg）及水塔（Vt）容量',
+    diTitle:'（二）進水管口徑（Di）／一日設計用水量（Vd）',
+    resultsTitle:'計算結果總覽',
+    summaryTitle:'列印摘要',
+    residentialRule:'【套房每戶以2人，住宅每戶以3人計算，透天厝、大型別墅每戶8人計算，每人每天用水量以250L/cap計算】',
+    waterFixedNote:'紅色框欄位可填寫；其餘欄位均為固定值。若需修改固定欄位內數字，請按右上角「後台設定」。',
+    resultsNote:'標準口徑依你提供表格級距優先判定：<b>20 / 25 / 40 mm</b>；超過時再顯示公式計算值。<br>本頁同步顯示安全係數、Vd、Di = 4.59√Vd 與本案採用口徑。'
+  },
+  layout:{
+    gap:16,rowGap:16,cardPadding:18,
+    basic:{order:1,minHeight:0,marginTop:0},
+    water:{order:2,minHeight:0,marginTop:0},
+    tank:{slot:'tank',minHeight:320,marginTop:0},
+    di:{slot:'di',minHeight:0,marginTop:0},
+    results:{slot:'results',minHeight:320,marginTop:0},
+    summary:{slot:'summary',minHeight:320,marginTop:0}
+  }
+};
+
+// 每個獨立建案都必須擁有自己完整的參數預設值
+const defaultMain = {
+  projectName:'',
+  permitNo:'',
+  residential: deepClone(defaultResidential),
+  nonResidential: deepClone(defaultNonResidential),
+  standardSizes: [20,25,40,50,75,100],
+  v2Factor:1,
+  resDays:2,
+  vgPercent:20,
+  adoptVg:0,
+  adoptVt:0,
+  lastUpdated:''
+};
+
+let backend;
+let appState;
+let isEditMode = false;
+let isExportedFile = false;
+let sessionKeyMain = STORAGE_MAIN;
+let sessionKeyBackend = STORAGE_BACKEND;
+
+function loadJson(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return deepClone(fallback);
+    return Object.assign(deepClone(fallback), JSON.parse(raw));
+  }catch(e){ 
+    return deepClone(fallback); 
+  }
+}
+
+function initData() {
+  try {
+    const embeddedTag = document.getElementById('embedded-data');
+    if (embeddedTag) {
+      isExportedFile = true;
+      const rawText = embeddedTag.textContent;
+      const dataHash = rawText.length + '_' + rawText.substring(0, 30);
+      
+      // 修正：原本匯出/內嵌資料版本使用 sessionStorage，關閉瀏覽器或檔案後資料會遺失。
+      // 改為固定使用 localStorage，重新開啟同一份 HTML 時會優先載入「儲存數據(暫存)」的資料。
+      sessionKeyMain = 'water_calc_saved_main_' + dataHash;
+      sessionKeyBackend = 'water_calc_saved_backend_' + dataHash;
+      
+      const embeddedData = JSON.parse(rawText);
+      let savedMain = null;
+      let savedBackend = null;
+      try {
+        savedMain = localStorage.getItem(sessionKeyMain);
+        savedBackend = localStorage.getItem(sessionKeyBackend);
+      } catch(e) {}
+      
+      appState = savedMain ? JSON.parse(savedMain) : embeddedData.main;
+      backend = savedBackend ? JSON.parse(savedBackend) : embeddedData.backend;
+      
+      try {
+        localStorage.setItem(sessionKeyMain, JSON.stringify(appState));
+        localStorage.setItem(sessionKeyBackend, JSON.stringify(backend));
+      } catch(e) {}
+    }
+  } catch(err) {
+    console.warn("Embedded parse fallback activated.");
+  }
+
+  if (!appState) appState = loadJson(STORAGE_MAIN, { current: 0, list: [deepClone(defaultMain)] });
+  if (!backend) backend = loadJson(STORAGE_BACKEND, defaultBackend);
+
+  if (!appState || typeof appState !== 'object' || !appState.list || !appState.list.length) {
+    appState = { current: 0, list: [deepClone(defaultMain)] };
+  } else {
+    // 檢查並補全各建案遺漏的常數
+    appState.list.forEach(function(proj) {
+      if (!proj.residential) proj.residential = deepClone(defaultResidential);
+      if (!proj.nonResidential) proj.nonResidential = deepClone(defaultNonResidential);
+      if (!proj.standardSizes) proj.standardSizes = backend.standardSizes ? deepClone(backend.standardSizes) : [20, 25, 40, 50, 75, 100];
+      
+      proj.residential.forEach(function(r, i) {
+        if (r.people === undefined) {
+          const b = backend.residential[i] || defaultResidential[i] || {};
+          r.name = b.name || r.name;
+          r.people = b.people !== undefined ? b.people : 2;
+          r.liters = b.liters !== undefined ? b.liters : 250;
+        }
+      });
+      proj.nonResidential.forEach(function(nr, i) {
+        if (nr.ratio === undefined) {
+          const b = backend.nonResidential[i] || defaultNonResidential[i] || {};
+          nr.name = b.name || nr.name;
+          nr.ratio = b.ratio !== undefined ? b.ratio : 0.6;
+          nr.persons = b.persons !== undefined ? b.persons : 0.2;
+          nr.liters = b.liters !== undefined ? b.liters : 100;
+        }
+      });
+    });
+  }
+}
+initData();
+
+let currentTabIndex = 0;
+if (appState && appState.current !== undefined) {
+  currentTabIndex = parseInt(appState.current, 10);
+}
+if (isNaN(currentTabIndex) || currentTabIndex < 0 || currentTabIndex >= appState.list.length) {
+  currentTabIndex = 0;
+}
+let mainData = appState.list[currentTabIndex];
+
+function saveJson(key, value){ 
+  try {
+    // 修正：暫存資料一律寫入 localStorage，避免關閉檔案後 sessionStorage 被清除。
+    const targetKey = isExportedFile ? (key === STORAGE_MAIN ? sessionKeyMain : sessionKeyBackend) : key;
+    localStorage.setItem(targetKey, JSON.stringify(value)); 
+  } catch(e) { } 
+}
+
+function saveMainData() {
+  appState.list[currentTabIndex] = mainData;
+  appState.current = currentTabIndex;
+  saveJson(STORAGE_MAIN, appState);
+}
+
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
+  const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+  const el = document.getElementById('currentDateTime');
+  if (el) el.textContent = dateStr + ' ' + timeStr;
+}
+setInterval(updateClock, 1000);
+
+// ===== 基準值查詢面板功能 (支援動態跨列排版呈現) =====
+function openBaselineModal() {
+  document.getElementById('baselineOverlay').style.display = 'flex';
+  document.getElementById('baselineSearch').value = '';
+  renderBaselineTable();
+}
+
+function closeBaselineModal() {
+  document.getElementById('baselineOverlay').style.display = 'none';
+}
+
+function renderBaselineTable() {
+  const query = document.getElementById('baselineSearch').value.toLowerCase().trim();
+  const tbody = document.getElementById('baselineTbody');
+  tbody.innerHTML = '';
+  
+  // 若沒有搜尋字串，完美還原跨列(合併儲存格)排版
+  if (!query) {
+    let html = '';
+    baselineData.forEach(function(group) {
+      // 動態抓取群組內的陣列長度做為 rowspan 的值，保證合併儲存格絕對正確
+      const spanCount = group.rows.length; 
+      
+      group.rows.forEach(function(row, index) {
+        html += '<tr>';
+        if (index === 0) {
+          html += '<td rowspan="' + spanCount + '" style="font-weight: 900; vertical-align: middle; font-size: 16px;">' + group.city + '</td>';
+        }
+        html += '<td style="vertical-align: middle;">' + row.district + '</td>';
+        html += '<td style="text-align:left; vertical-align: middle; line-height: 1.6;">' + row.villages + '</td>';
+        html += '<td style="color:#c62828; font-weight:bold; font-size: 16px; vertical-align: middle;">' + row.days + '</td>';
+        html += '<td class="muted" style="vertical-align: middle; line-height: 1.6;">' + row.note + '</td>';
+        html += '</tr>';
+      });
+    });
+    tbody.innerHTML = html;
+    return;
+  }
+
+  // 搜尋模式下，打平資料顯示符合的該行即可
+  let html = '';
+  let hasMatch = false;
+  baselineData.forEach(function(group) {
+    group.rows.forEach(function(row) {
+      const textToSearch = (group.city + row.district + row.villages).replace(/<br>/g, '');
+      if (textToSearch.includes(query)) {
+        hasMatch = true;
+        html += '<tr>';
+        html += '<td style="font-weight: 900; vertical-align: middle; font-size: 16px;">' + group.city + '</td>';
+        html += '<td style="vertical-align: middle;">' + row.district + '</td>';
+        html += '<td style="text-align:left; vertical-align: middle; line-height: 1.6;">' + row.villages + '</td>';
+        html += '<td style="color:#c62828; font-weight:bold; font-size: 16px; vertical-align: middle;">' + row.days + '</td>';
+        html += '<td class="muted" style="vertical-align: middle; line-height: 1.6;">' + row.note + '</td>';
+        html += '</tr>';
+      }
+    });
+  });
+
+  if (!hasMatch) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--muted);">找不到符合的地區資料，請嘗試其他關鍵字。</td></tr>';
+  } else {
+    tbody.innerHTML = html;
+  }
+}
+// ==========================
+
+function requestEditMode(){
+  if(isEditMode){
+    setEditMode(false);
+  } else {
+    document.getElementById('editModeOverlay').style.display = 'flex';
+    document.getElementById('editModePassword').value = '';
+    document.getElementById('editPwError').style.display = 'none';
+  }
+}
+
+function closeEditModeModal(){
+  document.getElementById('editModeOverlay').style.display = 'none';
+}
+
+function verifyEditModePw(){
+  const pw = document.getElementById('editModePassword').value;
+  if(pw === '123456'){
+    setEditMode(true);
+    closeEditModeModal();
+  } else {
+    document.getElementById('editPwError').style.display = 'block';
+  }
+}
+
+function setEditMode(enable){
+  isEditMode = enable;
+  applyEditModeState();
+}
+
+function applyEditModeState(){
+  const modeBtn = document.getElementById('modeBtn');
+  const addProjBtn = document.getElementById('addProjBtn');
+  const backendBtn = document.getElementById('backendBtn');
+  const tempSaveBtn = document.getElementById('tempSaveBtn');
+  
+  if(isEditMode){
+    modeBtn.textContent = '退出編輯模式';
+    modeBtn.classList.remove('primary');
+    modeBtn.classList.add('danger');
+    if(addProjBtn) addProjBtn.style.display = 'inline-flex';
+    if(backendBtn) backendBtn.style.display = 'inline-flex';
+    if(tempSaveBtn) tempSaveBtn.style.display = 'inline-flex';
+  } else {
+    modeBtn.textContent = '進入編輯模式';
+    modeBtn.classList.remove('danger');
+    modeBtn.classList.add('primary');
+    if(addProjBtn) addProjBtn.style.display = 'none';
+    if(backendBtn) backendBtn.style.display = 'none';
+    if(tempSaveBtn) tempSaveBtn.style.display = 'none';
+  }
+
+  document.querySelectorAll('.editable-input, .inline-edit').forEach(function(el) {
+    if(isEditMode){
+      el.removeAttribute('readonly');
+      el.style.pointerEvents = 'auto';
+    } else {
+      el.setAttribute('readonly', 'true');
+      el.style.pointerEvents = 'none';
+    }
+  });
+
+  document.querySelectorAll('.tab-close').forEach(function(el) {
+    el.style.display = isEditMode ? 'inline-flex' : 'none';
+  });
+}
+
+function tempSaveData() {
+  commitAllInputs();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
+  const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+  const timestamp = dateStr + ' ' + timeStr;
+  
+  mainData.lastUpdated = timestamp;
+  saveMainData();
+  document.getElementById('lastUpdatedTime').textContent = timestamp;
+  
+  alert('目前編輯的數據已暫存至瀏覽器！\n下次重新開啟同一份 HTML 檔案時，會優先讀取這次暫存的資料。');
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  appState.list.forEach(function(proj, idx) {
+    const tab = document.createElement('div');
+    tab.className = 'tab-item' + (idx === currentTabIndex ? ' active' : '');
+    tab.onclick = function() { switchTab(idx); };
+
+    const title = document.createElement('span');
+    title.textContent = proj.projectName || ('新建設專案 ' + (idx + 1));
+    tab.appendChild(title);
+
+    if (appState.list.length > 1) {
+      const closeBtn = document.createElement('span');
+      closeBtn.className = 'tab-close';
+      closeBtn.innerHTML = '✕';
+      closeBtn.style.display = isEditMode ? 'inline-flex' : 'none';
+      closeBtn.onclick = function(e) {
+        e.stopPropagation();
+        removeTab(idx);
+      };
+      tab.appendChild(closeBtn);
+    }
+    bar.appendChild(tab);
+  });
+}
+
+function switchTab(idx) {
+  if (currentTabIndex === idx) return;
+  commitAllInputs();
+  currentTabIndex = idx;
+  mainData = appState.list[currentTabIndex];
+  appState.current = currentTabIndex;
+  saveMainData();
+  
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  update();
+}
+
+// 建立建案專屬的常數快照（複製自當前後台設定）
+function addNewProject() {
+  commitAllInputs();
+  const newProj = deepClone(defaultMain);
+  newProj.projectName = '新建設專案 ' + (appState.list.length + 1);
+  
+  newProj.residential = backend.residential.map(function(b) {
+    return { name: b.name, people: n(b.people), liters: n(b.liters), households: 0 };
+  });
+  newProj.nonResidential = backend.nonResidential.map(function(b) {
+    return { name: b.name, ratio: n(b.ratio), persons: n(b.persons), liters: n(b.liters), area: 0 };
+  });
+  newProj.standardSizes = deepClone(backend.standardSizes);
+  
+  appState.list.push(newProj);
+  currentTabIndex = appState.list.length - 1;
+  mainData = appState.list[currentTabIndex];
+  saveMainData();
+  
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  update();
+}
+
+function removeTab(idx) {
+  if (!confirm('確定要刪除此建案分頁嗎？')) return;
+  appState.list.splice(idx, 1);
+  if (currentTabIndex >= appState.list.length) {
+    currentTabIndex = appState.list.length - 1;
+  }
+  if (currentTabIndex < 0) currentTabIndex = 0;
+  mainData = appState.list[currentTabIndex];
+  saveMainData();
+  
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  update();
+}
+
+function ensureBackendShape(){
+  if (!backend) backend = deepClone(defaultBackend);
+  if (!backend.texts) backend.texts = deepClone(defaultBackend.texts);
+  if (!backend.layout) backend.layout = deepClone(defaultBackend.layout);
+  if (!backend.residential) backend.residential = deepClone(defaultBackend.residential);
+  if (!backend.nonResidential) backend.nonResidential = deepClone(defaultBackend.nonResidential);
+  if (!backend.standardSizes) backend.standardSizes = deepClone(defaultBackend.standardSizes);
+  
+  const blocks = ['basic','water','tank','di','results','summary'];
+  blocks.forEach(function(k) {
+    if (!backend.layout[k]) backend.layout[k] = deepClone(defaultBackend.layout[k]);
+  });
+}
+
+function applyTextContent(){
+  ensureBackendShape();
+  document.getElementById('pageTitle').innerHTML = backend.texts.pageTitle;
+  document.getElementById('heroSub').innerHTML = backend.texts.heroSub;
+  document.getElementById('basicTitle').innerHTML = backend.texts.basicTitle;
+  document.getElementById('waterTitle').innerHTML = backend.texts.waterTitle;
+  document.getElementById('tankTitle').innerHTML = backend.texts.tankTitle;
+  document.getElementById('diTitle').innerHTML = backend.texts.diTitle;
+  document.getElementById('resultsTitle').innerHTML = backend.texts.resultsTitle;
+  document.getElementById('summaryTitle').innerHTML = backend.texts.summaryTitle;
+  document.getElementById('residentialRuleText').innerHTML = backend.texts.residentialRule;
+  document.getElementById('waterFixedNote').innerHTML = backend.texts.waterFixedNote;
+  document.getElementById('resultsNote').innerHTML = backend.texts.resultsNote;
+}
+
+function applyLayout(){
+  ensureBackendShape();
+  const pg = document.querySelector('.page-grid');
+  pg.style.columnGap = n(backend.layout.gap) + 'px';
+  pg.style.rowGap = n(backend.layout.rowGap) + 'px';
+
+  const leftStack = document.querySelector('.left-stack');
+  const basic = document.getElementById('basicCard');
+  const water = document.getElementById('waterCard');
+  [basic, water].sort(function(a,b) {
+    const ka = a.id === 'basicCard' ? backend.layout.basic.order : backend.layout.water.order;
+    const kb = b.id === 'basicCard' ? backend.layout.basic.order : backend.layout.water.order;
+    return ka-kb;
+  }).forEach(function(el) { leftStack.appendChild(el); });
+
+  const cardMap = {
+    basic: basic,
+    water: water,
+    tank: document.getElementById('tankCard'),
+    di: document.getElementById('diCard'),
+    results: document.getElementById('resultsCard'),
+    summary: document.getElementById('summaryCard')
+  };
+  Object.keys(cardMap).forEach(function(k) {
+    const el = cardMap[k];
+    const cfg = backend.layout[k] || {};
+    el.style.padding = n(backend.layout.cardPadding || 18) + 'px';
+    el.style.minHeight = n(cfg.minHeight) ? n(cfg.minHeight) + 'px' : '';
+    el.style.marginTop = n(cfg.marginTop) + 'px';
+  });
+  document.getElementById('tankCard').style.gridArea = backend.layout.tank.slot;
+  document.getElementById('diCard').style.gridArea = backend.layout.di.slot;
+  document.getElementById('resultsCard').style.gridArea = backend.layout.results.slot;
+  document.getElementById('summaryCard').style.gridArea = backend.layout.summary.slot;
+}
+
+function renderBackendExtras(){
+  ensureBackendShape();
+  document.getElementById('txtPageTitle').value = backend.texts.pageTitle;
+  document.getElementById('txtHeroSub').value = backend.texts.heroSub;
+  document.getElementById('txtBasicTitle').value = backend.texts.basicTitle;
+  document.getElementById('txtWaterTitle').value = backend.texts.waterTitle;
+  document.getElementById('txtTankTitle').value = backend.texts.tankTitle;
+  document.getElementById('txtDiTitle').value = backend.texts.diTitle;
+  document.getElementById('txtResultsTitle').value = backend.texts.resultsTitle;
+  document.getElementById('txtSummaryTitle').value = backend.texts.summaryTitle;
+  document.getElementById('txtResidentialRule').value = backend.texts.residentialRule;
+  document.getElementById('txtWaterFixedNote').value = backend.texts.waterFixedNote;
+  document.getElementById('txtResultsNote').value = backend.texts.resultsNote;
+
+  document.getElementById('layoutGap').value = backend.layout.gap;
+  document.getElementById('layoutRowGap').value = backend.layout.rowGap;
+  document.getElementById('layoutCardPadding').value = backend.layout.cardPadding;
+  document.getElementById('slotBasic').value = String(backend.layout.basic.order || 1);
+  document.getElementById('slotWater').value = String(backend.layout.water.order || 2);
+  document.getElementById('hBasic').value = backend.layout.basic.minHeight || 0;
+  document.getElementById('mtBasic').value = backend.layout.basic.marginTop || 0;
+  document.getElementById('hWater').value = backend.layout.water.minHeight || 0;
+  document.getElementById('mtWater').value = backend.layout.water.marginTop || 0;
+  document.getElementById('slotTank').value = backend.layout.tank.slot;
+  document.getElementById('hTank').value = backend.layout.tank.minHeight || 0;
+  document.getElementById('mtTank').value = backend.layout.tank.marginTop || 0;
+  document.getElementById('slotDi').value = backend.layout.di.slot;
+  document.getElementById('hDi').value = backend.layout.di.minHeight || 0;
+  document.getElementById('mtDi').value = backend.layout.di.marginTop || 0;
+  document.getElementById('slotResults').value = backend.layout.results.slot; 
+  document.getElementById('hResults').value = backend.layout.results.minHeight || 0;
+  document.getElementById('mtResults').value = backend.layout.results.marginTop || 0;
+  document.getElementById('slotSummary').value = backend.layout.summary.slot;
+  document.getElementById('hSummary').value = backend.layout.summary.minHeight || 0;
+  document.getElementById('mtSummary').value = backend.layout.summary.marginTop || 0;
+}
+
+function n(v){ const x = parseFloat(v); return Number.isFinite(x) ? x : 0; }
+function fmt(v,d){ if (d === undefined) d = 2; return n(v).toLocaleString('zh-Hant', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+function escapeHtml(str){ return String(str).replace(/[&<>"]/g, function(s) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]; }); }
+
+// 從自身建案內讀取專屬口徑，保證絕對獨立性
+function pickStandard(mm){ 
+  const sizes = mainData.standardSizes || backend.standardSizes || [20, 25, 40, 50, 75, 100];
+  for(let i=0; i<sizes.length; i++){ 
+    if(mm <= sizes[i]) return sizes[i]; 
+  } 
+  return sizes[sizes.length-1] || mm; 
+}
+
+// 讀取自身建案內的參數快照
+function mergedResidential(){
+  return mainData.residential.map(function(r) {
+    return {
+      name: r.name,
+      people: n(r.people),
+      liters: n(r.liters),
+      households: n(r.households)
+    };
+  });
+}
+
+function mergedNonResidential(){
+  return mainData.nonResidential.map(function(r) {
+    return {
+      name: r.name,
+      ratio: n(r.ratio),
+      persons: n(r.persons),
+      liters: n(r.liters),
+      area: n(r.area)
+    };
+  });
+}
+
+function resFormula(item){ return n(item.people)*n(item.households)*n(item.liters)/1000; }
+function nonResFormula(item){ return n(item.area)*n(item.ratio)*n(item.persons)*n(item.liters)/1000; }
+
+function renderResidential(){
+  const body = document.getElementById('resBody');
+  body.innerHTML = '';
+  mergedResidential().forEach(function(r, idx) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><input value="' + escapeAttr(r.name) + '" readonly></td>' +
+      '<td><input class="num" type="number" step="0.01" value="' + r.people + '" readonly></td>' +
+      '<td><input class="num editable-input" type="number" step="0.01" value="' + mainData.residential[idx].households + '" data-kind="res-households" data-i="' + idx + '"></td>' +
+      '<td><input class="num" type="number" step="0.01" value="' + r.liters + '" readonly></td>' +
+      '<td>' + fmt(resFormula(r)) + '</td>';
+    body.appendChild(tr);
+  });
+}
+
+function renderNonResidential(){
+  const body = document.getElementById('nrBody');
+  body.innerHTML = '';
+  mergedNonResidential().forEach(function(r, idx) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><input value="' + escapeAttr(r.name) + '" readonly></td>' +
+      '<td><input class="num editable-input" type="number" step="0.01" value="' + mainData.nonResidential[idx].area + '" data-kind="non-area" data-i="' + idx + '"></td>' +
+      '<td><input class="num" type="number" step="0.01" value="' + r.ratio + '" readonly></td>' +
+      '<td><input class="num" type="number" step="0.01" value="' + r.persons + '" readonly></td>' +
+      '<td><input class="num" type="number" step="0.01" value="' + r.liters + '" readonly></td>' +
+      '<td>' + fmt(nonResFormula(r)) + '</td>';
+    body.appendChild(tr);
+  });
+}
+
+function escapeAttr(str){ return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+function calcSafety(V){
+  const sizes = mainData.standardSizes || backend.standardSizes || [20, 25, 40];
+  if(V < 13.5) return {factor:1.5, meter: sizes[0] !== undefined ? sizes[0] : 20, range:'V < 13.5'};
+  if(V <= 24.5) return {factor:1.4, meter: sizes[1] !== undefined ? sizes[1] : 25, range:'V = 13.6 ～ 24.5'};
+  if(V <= 68.5) return {factor:1.2, meter: sizes[2] !== undefined ? sizes[2] : 40, range:'V = 24.6 ～ 68.5'};
+  return {factor:1.1, meter:null, range:'V > 68.6'};
+}
+
+function renderDiTable(V, Vd, rawDi, safety){
+  const sizes = mainData.standardSizes || backend.standardSizes || [20, 25, 40];
+  const s0 = sizes[0] !== undefined ? sizes[0] : 20;
+  const s1 = sizes[1] !== undefined ? sizes[1] : 25;
+  const s2 = sizes[2] !== undefined ? sizes[2] : 40;
+
+  const rows = [
+    {label:'V < 13.5', factor:1.5, meter:String(s0), active: V < 13.5},
+    {label:'V = 13.6 ～ 24.5', factor:1.4, meter:String(s1), active: V >= 13.5 && V <= 24.5},
+    {label:'V = 24.6 ～ 68.5', factor:1.2, meter:String(s2), active: V > 24.5 && V <= 68.5},
+    {label:'V > 68.6', factor:1.1, meter:'DI = 4.59√Vd = ' + fmt(rawDi) + ' mm', active: V > 68.5}
+  ];
+  const adopted = safety.meter ? '(' + safety.meter + 'mm)' : '(' + fmt(rawDi) + 'mm)';
+  document.getElementById('diTableBody').innerHTML = rows.map(function(r) {
+    return '<tr class="' + (r.active ? 'active-row' : '') + '">' +
+      '<td>' + r.label + '</td>' +
+      '<td>' + fmt(r.factor,1) + '</td>' +
+      '<td>' + r.meter + '</td>' +
+      '<td>' + (r.active ? fmt(Vd) : '') + '</td>' +
+      '<td>' + (r.active ? '<span class="adopt-red">' + adopted + '</span>' : '') + '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('footVdValue').textContent = fmt(Vd);
+}
+
+function update(){
+  saveMainData();
+  const residential = mergedResidential();
+  const nonResidential = mergedNonResidential();
+  
+  let v1 = 0;
+  for(let i=0; i<residential.length; i++) v1 += resFormula(residential[i]);
+  
+  let v2Prime = 0;
+  for(let j=0; j<nonResidential.length; j++) v2Prime += nonResFormula(nonResidential[j]);
+  
+  const v2Factor = n(mainData.v2Factor) || 1;
+  const v2 = v2Prime * v2Factor;
+  const V = v1 + v2;
+  const safety = calcSafety(V);
+  const Vd = V * safety.factor;
+  const vgPercent = n(mainData.vgPercent || 0);
+  const minVg = Vd * vgPercent / 100;
+  const resDays = n(mainData.resDays || 2);
+  const resBase = Vd * resDays;
+  const rawDp = 6.65 * Math.sqrt(Vd || 0);
+  const adoptDp = pickStandard(rawDp);
+  const adoptVg = n(mainData.adoptVg);
+  const adoptVt = n(mainData.adoptVt);
+  const tankTotal = adoptVg + adoptVt;
+  const tankPass = tankTotal >= Vd;
+  const resBasePass = tankTotal >= resBase;
+  const rawDi = 4.59 * Math.sqrt(Vd || 0);
+
+  document.getElementById('projectName').value = mainData.projectName;
+  document.getElementById('permitNo').value = mainData.permitNo;
+  document.getElementById('v2Factor').value = mainData.v2Factor;
+  document.getElementById('resDays').value = mainData.resDays;
+  document.getElementById('formulaDays').value = mainData.resDays;
+  document.getElementById('vgPercent').value = mainData.vgPercent;
+  document.getElementById('adoptVg').value = mainData.adoptVg;
+  document.getElementById('adoptVt').value = mainData.adoptVt;
+
+  document.getElementById('lastUpdatedTime').textContent = mainData.lastUpdated || '尚未更新';
+
+  document.getElementById('outV1').textContent = fmt(v1);
+  document.getElementById('eqV1').textContent = residential.map(function(r) { return r.name + ':' + fmt(resFormula(r)); }).join('；');
+  document.getElementById('outV2').textContent = fmt(v2);
+  document.getElementById('eqV2').textContent = "V2'=" + fmt(v2Prime) + " × " + fmt(v2Factor) + " = " + fmt(v2);
+  document.getElementById('outV').textContent = fmt(V);
+  document.getElementById('eqV').textContent = "V = V1 + V2 = " + fmt(v1) + " + " + fmt(v2);
+  document.getElementById('outVd').textContent = fmt(Vd);
+  document.getElementById('eqVd').textContent = "Vd = V × 安全係數 = " + fmt(V) + " × " + fmt(safety.factor) + " = " + fmt(Vd);
+  const adoptedMeterText = safety.meter ? (safety.meter + 'mm') : (fmt(rawDi) + 'mm');
+  document.getElementById('outMeter').textContent = adoptedMeterText;
+  document.getElementById('eqMeter').textContent = safety.meter ? ("依 V 值範圍 " + safety.range + " 採 " + safety.meter + " mm") : ("V > 68.6，依 DI = 4.59√Vd = " + fmt(rawDi) + " mm");
+  renderDiTable(V, Vd, rawDi, safety);
+  document.getElementById('outDp').textContent = fmt(rawDp) + "mm → 採 " + adoptDp + "mm";
+  document.getElementById('eqDp').textContent = "Dp = 6.65√Vd = " + fmt(rawDp) + " mm；標準口徑採 " + adoptDp + " mm";
+
+  document.getElementById('fAdoptVg').textContent = fmt(adoptVg);
+  document.getElementById('fMinVg').textContent = fmt(minVg);
+  document.getElementById('fAdoptVt').textContent = fmt(adoptVt);
+  document.getElementById('fTankTotal').textContent = fmt(tankTotal);
+  document.getElementById('fVd100').textContent = fmt(resBase); 
+  document.getElementById('fResDays').textContent = fmt(resDays,0);
+  document.getElementById('fResBase').textContent = fmt(resBase);
+  document.getElementById('tankJudgeText').innerHTML = 
+    "容量檢核：水池＋水塔合計 <b style=\"color:" + (tankPass ? 'var(--ok)' : 'var(--warn)') + "\">" + fmt(tankTotal) + "</b> M³，" +
+    (tankPass ? '<b style="color:var(--ok)">符合</b>' : '<b style="color:var(--warn)">不足</b>') + " 一日設計用水量 Vd = <b>" + fmt(Vd) + "</b> M³；" +
+    "住宅基準值 <b>" + fmt(resBase) + "</b> M³，" + (resBasePass ? '<b style="color:var(--ok)">已達基準</b>' : '<b style="color:var(--warn)">未達基準</b>') + "。";
+
+  document.getElementById('summary').innerHTML = 
+    '<div class="summary-list">' +
+      '<div><b>工程名稱：</b>' + escapeHtml(mainData.projectName) + '</div>' +
+      '<div><b>建照號碼：</b>' + escapeHtml(mainData.permitNo || '—') + '</div>' +
+      '<div><b>一、間接給水總表口徑：</b>住宅部分 V1 = <b>' + fmt(v1) + '</b> M³；非住宅部分 V2 = <b>' + fmt(v2) + '</b> M³；合計 V = <b>' + fmt(V) + '</b> M³</div>' +
+      '<div><b>二、一日設計用水量：</b>Vd = V × 安全係數 = <b>' + fmt(V) + '</b> × <b>' + fmt(safety.factor) + '</b> = <b>' + fmt(Vd) + '</b> M³ <span class="pill">安全係數 ' + fmt(safety.factor) + '</span></div>' +
+      '<div><b>三、進水總表口徑：</b><b>' + escapeHtml(adoptedMeterText) + '</b>；Di = 4.59√Vd = <b>' + fmt(rawDi) + '</b> mm</div>' +
+      '<div><b>四、水池、水塔容量：</b>Vg 採用 <b>' + fmt(adoptVg) + '</b> M³；Vt 採用 <b>' + fmt(adoptVt) + '</b> M³；合計 <b>' + fmt(tankTotal) + '</b> M³</div>' +
+      '<div><b>五、容量檢核：</b>應大於 <b>' + fmt(resDays,0) + '</b> 日設計用水量（Vd）= <b>' + fmt(resBase) + '</b> M³；住宅類基準值 = <b>' + fmt(resBase) + '</b> M³</div>' +
+      '<div><b>六、揚水管口徑：</b>Dp = 6.65√Vd = <b>' + fmt(rawDp) + '</b> mm，採用 <b>' + adoptDp + '</b> mm 揚水管</div>' +
+    '</div>';
+  
+  renderTabs();
+  applyEditModeState();
+}
+
+function syncMainDataFromInput(t){
+  if(t.id === 'projectName') mainData.projectName = t.value;
+  else if(t.id === 'permitNo') mainData.permitNo = t.value;
+  else if(t.id === 'v2Factor') mainData.v2Factor = t.value;
+  else if(t.id === 'resDays' || t.id === 'formulaDays') mainData.resDays = t.value;
+  else if(t.id === 'vgPercent') mainData.vgPercent = t.value;
+  else if(t.id === 'adoptVg') mainData.adoptVg = t.value;
+  else if(t.id === 'adoptVt') mainData.adoptVt = t.value;
+  else if(t.dataset.kind === 'res-households') mainData.residential[Number(t.dataset.i)].households = t.value;
+  else if(t.dataset.kind === 'non-area') mainData.nonResidential[Number(t.dataset.i)].area = t.value;
+  else return false;
+  return true;
+}
+
+function onMainInput(e){
+  const t = e.target;
+  if(!syncMainDataFromInput(t)) return;
+  saveMainData();
+}
+
+function onMainCommit(e){
+  const t = e.target;
+  if(!syncMainDataFromInput(t)) return;
+  if(t.dataset.kind === 'res-households' || t.dataset.kind === 'non-area'){
+    renderResidential();
+    renderNonResidential();
+    bindMainInputs();
+  }
+  update();
+}
+
+function onMainKeydown(e){
+  if(e.key !== 'Enter') return;
+  e.preventDefault();
+  e.target.blur();
+}
+
+function bindMainInputs(){
+  document.querySelectorAll('#projectName,#permitNo,#v2Factor,#resDays,#formulaDays,#vgPercent,#adoptVg,#adoptVt,input[data-kind]').forEach(function(el) {
+    el.removeEventListener('input', onMainInput);
+    el.removeEventListener('change', onMainCommit);
+    el.removeEventListener('blur', onMainCommit);
+    el.removeEventListener('keydown', onMainKeydown);
+    el.addEventListener('input', onMainInput);
+    el.addEventListener('change', onMainCommit);
+    el.addEventListener('blur', onMainCommit);
+    el.addEventListener('keydown', onMainKeydown);
+  });
+}
+
+function downloadBlob(content, filename, type){
+  if (type === undefined) type = 'text/plain;charset=utf-8';
+  const blob = new Blob([content], { type: type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  try{ a.click(); }catch(err){ a.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})); }
+  setTimeout(function() {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 1200);
+}
+
+function sanitizeFilename(name){
+  return String(name || '').trim().replace(/[\\/:*?"<>|]+/g, '_');
+}
+function stamp(){
+  const d = new Date();
+  const pad = function(n) { return String(n).padStart(2,'0'); };
+  return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+function syncAllEditableValues(){
+  document.querySelectorAll('#projectName,#permitNo,#v2Factor,#resDays,#formulaDays,#vgPercent,#adoptVg,#adoptVt,input[data-kind]').forEach(syncMainDataFromInput);
+}
+
+function commitAllInputs(){
+  syncAllEditableValues();
+  document.querySelectorAll('input,select,textarea').forEach(function(el) {
+    if(el.id === 'jsonFile' || el.id === 'adminPassword') return;
+    if(typeof el.blur === 'function') el.blur();
+  });
+  saveMainData();
+  saveJson(STORAGE_BACKEND, backend);
+}
+
+function buildExportHTML(){
+  commitAllInputs();
+  
+  const wasEdit = isEditMode;
+  setEditMode(false);
+  update();
+
+  const snapshot = { main: appState, backend: backend };
+
+  const oldTag = document.getElementById('embedded-data');
+  if(oldTag) {
+    oldTag.parentNode.removeChild(oldTag);
+  }
+
+  const scriptTag = document.createElement('script');
+  scriptTag.id = 'embedded-data';
+  scriptTag.type = 'application/json';
+  scriptTag.textContent = '\n' + JSON.stringify(snapshot).replace(/</g, '\\u003c') + '\n';
+  document.head.appendChild(scriptTag);
+
+  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+  if(wasEdit) {
+    setEditMode(true);
+  }
+
+  return html;
+}
+
+function saveAsNewHTML(event){
+  if(event) event.preventDefault();
+  const suggested = sanitizeFilename(mainData.projectName || '水理計算表_新檔') || '水理計算表_新檔';
+  const name = prompt('請輸入另存新檔檔名', suggested + '_' + stamp());
+  if(name === null) return false;
+  const filename = sanitizeFilename(name) || '水理計算表_新檔';
+  downloadBlob(buildExportHTML(), filename + '.html', 'text/html;charset=utf-8');
+  return false;
+}
+
+function openBackend(){
+  renderBackendTables();
+  renderBackendExtras();
+  document.getElementById('backendOverlay').style.display = 'flex';
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('backendContent').style.display = 'none';
+}
+
+function closeBackend(){
+  document.getElementById('backendOverlay').style.display = 'none';
+}
+
+function unlockBackend(){
+  const pw = document.getElementById('adminPassword').value;
+  if(pw !== DEFAULT_PASSWORD){
+    alert('密碼錯誤，請輸入正確後台密碼。');
+    return;
+  }
+  renderBackendTables();
+  renderBackendExtras();
+  document.getElementById('backendContent').style.display = 'block';
+}
+
+// 修改點：後台介面讀取「當下觀看建案(mainData)」的固定數值，而不是全域範本
+function renderBackendTables(){
+  const adminResBody = document.getElementById('adminResBody');
+  adminResBody.innerHTML = mainData.residential.map(function(r, i) {
+    return '<tr>' +
+      '<td><input value="' + escapeAttr(r.name) + '" data-admin="res-name" data-i="' + i + '"></td>' +
+      '<td><input type="number" step="0.01" class="num" value="' + n(r.people) + '" data-admin="res-people" data-i="' + i + '"></td>' +
+      '<td><input type="number" step="0.01" class="num" value="' + n(r.liters) + '" data-admin="res-liters" data-i="' + i + '"></td>' +
+    '</tr>';
+  }).join('');
+
+  const adminNrBody = document.getElementById('adminNrBody');
+  adminNrBody.innerHTML = mainData.nonResidential.map(function(r, i) {
+    return '<tr>' +
+      '<td><input value="' + escapeAttr(r.name) + '" data-admin="non-name" data-i="' + i + '"></td>' +
+      '<td><input type="number" step="0.01" class="num" value="' + n(r.ratio) + '" data-admin="non-ratio" data-i="' + i + '"></td>' +
+      '<td><input type="number" step="0.01" class="num" value="' + n(r.persons) + '" data-admin="non-persons" data-i="' + i + '"></td>' +
+      '<td><input type="number" step="0.01" class="num" value="' + n(r.liters) + '" data-admin="non-liters" data-i="' + i + '"></td>' +
+    '</tr>';
+  }).join('');
+
+  document.getElementById('std20').value = (mainData.standardSizes && mainData.standardSizes[0] !== undefined) ? mainData.standardSizes[0] : 20;
+  document.getElementById('std25').value = (mainData.standardSizes && mainData.standardSizes[1] !== undefined) ? mainData.standardSizes[1] : 25;
+  document.getElementById('std40').value = (mainData.standardSizes && mainData.standardSizes[2] !== undefined) ? mainData.standardSizes[2] : 40;
+}
+
+// 修改點：儲存時，同時寫入「當下觀看建案(mainData)」與「全域範本(backend)」
+function saveBackend(){
+  ensureBackendShape();
+
+  document.querySelectorAll('[data-admin]').forEach(function(el) {
+    const i = Number(el.dataset.i);
+    const kind = el.dataset.admin;
+    if(kind === 'res-name') { mainData.residential[i].name = el.value; backend.residential[i].name = el.value; }
+    else if(kind === 'res-people') { mainData.residential[i].people = n(el.value); backend.residential[i].people = n(el.value); }
+    else if(kind === 'res-liters') { mainData.residential[i].liters = n(el.value); backend.residential[i].liters = n(el.value); }
+    else if(kind === 'non-name') { mainData.nonResidential[i].name = el.value; backend.nonResidential[i].name = el.value; }
+    else if(kind === 'non-ratio') { mainData.nonResidential[i].ratio = n(el.value); backend.nonResidential[i].ratio = n(el.value); }
+    else if(kind === 'non-persons') { mainData.nonResidential[i].persons = n(el.value); backend.nonResidential[i].persons = n(el.value); }
+    else if(kind === 'non-liters') { mainData.nonResidential[i].liters = n(el.value); backend.nonResidential[i].liters = n(el.value); }
+  });
+
+  const stdSizes = [
+    n(document.getElementById('std20').value) || 20,
+    n(document.getElementById('std25').value) || 25,
+    n(document.getElementById('std40').value) || 40,
+    50, 75, 100
+  ];
+  mainData.standardSizes = deepClone(stdSizes);
+  backend.standardSizes = deepClone(stdSizes);
+
+  backend.texts.pageTitle = document.getElementById('txtPageTitle').value;
+  backend.texts.heroSub = document.getElementById('txtHeroSub').value;
+  backend.texts.basicTitle = document.getElementById('txtBasicTitle').value;
+  backend.texts.waterTitle = document.getElementById('txtWaterTitle').value;
+  backend.texts.tankTitle = document.getElementById('txtTankTitle').value;
+  backend.texts.diTitle = document.getElementById('txtDiTitle').value;
+  backend.texts.resultsTitle = document.getElementById('txtResultsTitle').value;
+  backend.texts.summaryTitle = document.getElementById('txtSummaryTitle').value;
+  backend.texts.residentialRule = document.getElementById('txtResidentialRule').value;
+  backend.texts.waterFixedNote = document.getElementById('txtWaterFixedNote').value;
+  backend.texts.resultsNote = document.getElementById('txtResultsNote').value;
+
+  backend.layout.gap = n(document.getElementById('layoutGap').value) || 16;
+  backend.layout.rowGap = n(document.getElementById('layoutRowGap').value) || 16;
+  backend.layout.cardPadding = n(document.getElementById('layoutCardPadding').value) || 18;
+
+  backend.layout.basic.order = n(document.getElementById('slotBasic').value) || 1;
+  backend.layout.basic.minHeight = n(document.getElementById('hBasic').value);
+  backend.layout.basic.marginTop = n(document.getElementById('mtBasic').value);
+  backend.layout.water.order = n(document.getElementById('slotWater').value) || 2;
+  backend.layout.water.minHeight = n(document.getElementById('hWater').value);
+  backend.layout.water.marginTop = n(document.getElementById('mtWater').value);
+  backend.layout.tank.slot = document.getElementById('slotTank').value;
+  backend.layout.tank.minHeight = n(document.getElementById('hTank').value);
+  backend.layout.tank.marginTop = n(document.getElementById('mtTank').value);
+  backend.layout.di.slot = document.getElementById('slotDi').value;
+  backend.layout.di.minHeight = n(document.getElementById('hDi').value);
+  backend.layout.di.marginTop = n(document.getElementById('mtDi').value);
+  backend.layout.results.slot = document.getElementById('slotResults').value;
+  backend.layout.results.minHeight = n(document.getElementById('hResults').value);
+  backend.layout.results.marginTop = n(document.getElementById('mtResults').value);
+  backend.layout.summary.slot = document.getElementById('slotSummary').value;
+  backend.layout.summary.minHeight = n(document.getElementById('hSummary').value);
+  backend.layout.summary.marginTop = n(document.getElementById('mtSummary').value);
+
+  saveJson(STORAGE_BACKEND, backend);
+  saveMainData(); // 儲存當前建案數據快照
+  
+  applyTextContent();
+  applyLayout();
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  update();
+  
+  alert('後台設定已儲存！\n\n【當前分頁】的數值已更新並重新計算。\n新設定也將作為未來新增建案的預設範本，但不會影響其他已建立好的建案數據。');
+  closeBackend();
+}
+
+function resetBackendDefaults(){
+  if(!confirm('確定要恢復後台預設值嗎？')) return;
+  backend = deepClone(defaultBackend);
+  saveJson(STORAGE_BACKEND, backend);
+  
+  mainData.residential = deepClone(defaultBackend.residential);
+  mainData.nonResidential = deepClone(defaultBackend.nonResidential);
+  mainData.standardSizes = deepClone(defaultBackend.standardSizes);
+  saveMainData();
+  
+  applyTextContent();
+  applyLayout();
+  renderBackendTables();
+  renderBackendExtras();
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  update();
+  alert('已恢復預設值。');
+}
+
+function initPage(){
+  ensureBackendShape();
+  applyTextContent();
+  applyLayout();
+  renderResidential();
+  renderNonResidential();
+  bindMainInputs();
+  renderBackendTables();
+  renderBackendExtras();
+  document.getElementById('backendContent').style.display = 'none';
+  
+  updateClock(); 
+  
+  setEditMode(false);
+  update();
+
+  // 綁定基準值面板搜尋事件
+  document.getElementById('baselineSearch').addEventListener('input', renderBaselineTable);
+
+  document.getElementById('backendOverlay').addEventListener('click', function(e) {
+    if(e.target.id === 'backendOverlay') closeBackend();
+  });
+  document.getElementById('editModeOverlay').addEventListener('click', function(e) {
+    if(e.target.id === 'editModeOverlay') closeEditModeModal();
+  });
+  document.getElementById('baselineOverlay').addEventListener('click', function(e) {
+    if(e.target.id === 'baselineOverlay') closeBaselineModal();
+  });
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initPage);
+}else{
+  initPage();
+}
+</script>
+
+</body></html>
